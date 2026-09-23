@@ -23,7 +23,7 @@ public class Customer {
 
     @OneToMany(mappedBy = "customer", fetch = FetchType.EAGER)
     @JsonManagedReference
-    private List<Order> orders;
+    private List<OrderDetails> orders;
 
     public Long getId() {
         return id;
@@ -57,11 +57,11 @@ public class Customer {
         this.phone = phone;
     }
 
-    public List<Order> getOrders() {
+    public List<OrderDetails> getOrders() {
         return orders;
     }
 
-    public void setOrders(List<Order> orders) {
+    public void setOrders(List<OrderDetails> orders) {
         this.orders = orders;
     }
 }

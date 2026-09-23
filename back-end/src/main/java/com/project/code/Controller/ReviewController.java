@@ -1,25 +1,45 @@
 package com.project.code.Controller;
 
+import com.project.code.Model.Customer;
+import com.project.code.Model.Review;
+import com.project.code.Repo.CustomerRepository;
+import com.project.code.Repo.ReviewRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/reviews")
 public class ReviewController {
-// 1. Set Up the Controller Class:
-//    - Annotate the class with `@RestController` to designate it as a REST controller for handling HTTP requests.
-//    - Map the class to the `/reviews` URL using `@RequestMapping("/reviews")`.
 
+    @Autowired
+    private ReviewRepository reviewRepository;
 
- // 2. Autowired Dependencies:
-//    - Inject the following dependencies via `@Autowired`:
-//        - `ReviewRepository` for accessing review data.
-//        - `CustomerRepository` for retrieving customer details associated with reviews.
+    @Autowired
+    private CustomerRepository customerRepository;
 
+    @GetMapping("/{storeId}/{productId}")
+    public Map<String, Object> getReviews(@PathVariable Long storeId, @PathVariable Long productId) {
+        List<Map<String, Object>> reviews = new ArrayList<>();
 
-// 3. Define the `getReviews` Method:
-//    - Annotate with `@GetMapping("/{storeId}/{productId}")` to fetch reviews for a specific product in a store by `storeId` and `productId`.
-//    - Accept `storeId` and `productId` via `@PathVariable`.
-//    - Fetch reviews using `findByStoreIdAndProductId()` method from `ReviewRepository`.
-//    - Filter reviews to include only `comment`, `rating`, and the `customerName` associated with the review.
-//    - Use `findById(review.getCustomerId())` from `CustomerRepository` to get customer name.
-//    - Return filtered reviews in a `Map<String, Object>` with key `reviews`.
+        for (Review review : reviewRepository.findByStoreIdAndProductId(storeId, productId)) {
+            String customerName = customerRepository.findById(review.getCustomerId())
+                    .map(Customer::getName)
+                    .orElse("Unknown");
 
-    
-   
+            Map<String, Object> filtered = new HashMap<>();
+            filtered.put("comment", review.getComment());
+            filtered.put("rating", review.getRating());
+            filtered.put("customerName", customerName);
+            reviews.add(filtered);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("reviews", reviews);
+        return result;
+    }
 }
