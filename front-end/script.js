@@ -1,4 +1,4 @@
-const apiURL = '';
+const apiURL = 'c0e39506-3c2d-5707-acca-3050dcda2a0f.webview.theiadockernext-1-labs-prod-theiak8s-4-tor01.labs.cognitiveclass.ai';
 let students = [];
 let Ordercount = 1;
 let deleteRow = [];
