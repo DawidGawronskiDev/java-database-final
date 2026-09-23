@@ -1,27 +1,78 @@
 package com.project.code.Service;
 
+import com.project.code.Model.Customer;
+import com.project.code.Model.OrderDetails;
+import com.project.code.Model.PlaceOrderRequestDTO;
+import com.project.code.Repo.CustomerRepository;
+import com.project.code.Repo.InventoryRepository;
+import com.project.code.Repo.OrderDetailsRepository;
+import com.project.code.Repo.OrderItemRepository;
+import com.project.code.Repo.ProductRepository;
+import com.project.code.Repo.StoreRepository;
+import com.project.code.Model.Inventory;
+import com.project.code.Model.OrderItem;
+import com.project.code.Model.PurchaseProductDTO;
+import com.project.code.Model.Store;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDateTime;
 
+@Service
 public class OrderService {
-// 1. **saveOrder Method**:
-//    - Processes a customer's order, including saving the order details and associated items.
-//    - Parameters: `PlaceOrderRequestDTO placeOrderRequest` (Request data for placing an order)
-//    - Return Type: `void` (This method doesn't return anything, it just processes the order)
 
-// 2. **Retrieve or Create the Customer**:
-//    - Check if the customer exists by their email using `findByEmail`.
-//    - If the customer exists, use the existing customer; otherwise, create and save a new customer using `customerRepository.save()`.
+    @Autowired
+    private ProductRepository productRepository;
 
-// 3. **Retrieve the Store**:
-//    - Fetch the store by ID from `storeRepository`.
-//    - If the store doesn't exist, throw an exception. Use `storeRepository.findById()`.
+    @Autowired
+    private InventoryRepository inventoryRepository;
+    
+    @Autowired
+    private CustomerRepository customerRepository;
 
-// 4. **Create OrderDetails**:
-//    - Create a new `OrderDetails` object and set customer, store, total price, and the current timestamp.
-//    - Set the order date using `java.time.LocalDateTime.now()` and save the order with `orderDetailsRepository.save()`.
+    @Autowired
+    private StoreRepository storeRepository;
 
-// 5. **Create and Save OrderItems**:
-//    - For each product purchased, find the corresponding inventory, update stock levels, and save the changes using `inventoryRepository.save()`.
-//    - Create and save `OrderItem` for each product and associate it with the `OrderDetails` using `orderItemRepository.save()`.
+    @Autowired
+    private OrderDetailsRepository orderDetailsRepository;
 
-   
+    @Autowired
+    private OrderItemRepository orderItemRepository;
+
+    @Transactional
+    public void saveOrder(PlaceOrderRequestDTO placeOrderRequest) {
+        Customer customer = customerRepository.findByEmail(placeOrderRequest.getCustomerEmail());
+
+        if (customer == null) {
+            customer = new Customer();
+            customer.setName(placeOrderRequest.getCustomerName());
+            customer.setEmail(placeOrderRequest.getCustomerEmail());
+            customer.setPhone(placeOrderRequest.getCustomerPhone());
+            customer = customerRepository.save(customer);
+        }
+
+        Store store = storeRepository.findById(placeOrderRequest.getStoreId())
+                .orElseThrow(() -> new RuntimeException("Store not found"));
+
+        OrderDetails orderDetails = new OrderDetails(
+                customer, store, placeOrderRequest.getTotalPrice(), LocalDateTime.now());
+        orderDetails = orderDetailsRepository.save(orderDetails);
+
+        for (PurchaseProductDTO item : placeOrderRequest.getPurchaseProduct()) {
+            Inventory inventory = inventoryRepository.findByProductIdandStoreId(item.getId(), store.getId());
+            if (inventory == null) {
+                throw new RuntimeException("Product " + item.getId() + " not in store");
+            }
+            if (inventory.getStockLevel() < item.getQuantity()) {
+                throw new RuntimeException("Not enough stock for product " + item.getId());
+            }
+
+            inventory.setStockLevel(inventory.getStockLevel() - item.getQuantity());
+            inventoryRepository.save(inventory);
+
+            OrderItem orderItem = new OrderItem(
+                    orderDetails, inventory.getProduct(), item.getQuantity(), item.getPrice());
+            orderItemRepository.save(orderItem);
+        }
+}   
 }
